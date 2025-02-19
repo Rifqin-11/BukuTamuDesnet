@@ -63,6 +63,7 @@ class GuestBook extends ResourceController
             'institution_name' => 'required',
             'pic_name' => 'required',
             'phone_number' => 'required|numeric',
+            'employee_id' => 'required',
             'agenda' => 'required',
             'identity_photo' => 'uploaded[identity_photo]|max_size[identity_photo,2048]|is_image[identity_photo]|mime_in[identity_photo,image/jpg,image/jpeg,image/png]'
         ];
@@ -74,21 +75,54 @@ class GuestBook extends ResourceController
         $image = $this->request->getFile('identity_photo');
         $newName = $image->getRandomName();
         $image->move('uploads/identity_photos', $newName);
-        $imagePath = ($newName);
-
+        
         $data = [
             'institution_name' => $this->request->getVar('institution_name'),
             'pic_name' => $this->request->getVar('pic_name'),
             'phone_number' => $this->request->getVar('phone_number'),
             'employee_id' => $this->request->getVar('employee_id'),
             'agenda' => $this->request->getVar('agenda'),
-            'identity_photo' => $imagePath
+            'identity_photo' => $newName
         ];
 
         $guestBookModel = new GuestBooksModel();
         $guestBookModel->save($data);
+        
+        $this->_sendEmail($data);
 
-        return $this->respondCreated(['message' => 'Data inserted successfully']);
+        return $this->respondCreated([
+            'message' => 'Data inserted successfully'
+        ]);
+    }
+
+    private function _sendEmail($data)
+    {
+        $employeeModel = new EmployeesModel;
+        
+        $employee_id = $this->request->getVar('employee_id');
+        $email = $employeeModel->getEmployeeEmailById($employee_id)['email'];
+
+        $emailService = \Config\Services::email();
+        $emailService->setTo($email);
+
+        $emailService->setSubject('Guest Book PT Des Teknologi Informasi');
+        $emailService->setMessage('You have new guest : <br>
+            Intitution Name : ' . $data['institution_name'] .'<br>
+            PIC Name        : ' . $data['pic_name'] . '<br>
+            Phone Number    : ' . $data['phone_number'] . '<br>
+            Agenda          : ' . $data['agenda'] . '<br>'
+        );
+        
+        // Lampirkan gambar secara inline
+        $imagePath = FCPATH . 'uploads/identity_photos/' . $data['identity_photo'];
+        $emailService->attach($imagePath, 'inline', $data['identity_photo']);
+
+        if($emailService->send()){
+            return true;
+        } else {
+            return $emailService->printDebugger();
+            die;
+        }
     }
 
     /**

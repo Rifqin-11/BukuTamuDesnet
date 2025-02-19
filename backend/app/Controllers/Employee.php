@@ -20,7 +20,7 @@ class Employee extends ResourceController
     public function index()
     {
         $employeesModel = new EmployeesModel;
-        $data= $employeesModel->getMeetingWith();
+        $data = $employeesModel->getMeetingWith();
         $formattedEmployees = array_map(function($employee) {
             return [
                 'id' => $employee['id'],
