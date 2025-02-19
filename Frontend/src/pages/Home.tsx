@@ -23,6 +23,7 @@ function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     document.title = "Buku Tamu Desnet";
@@ -95,28 +96,35 @@ function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     let errors: { meetingWith?: string; photo?: string } = {};
-
+  
     if (!formData.meeting_with) {
       errors.meetingWith = "Please select an employee";
     }
     if (!photo) {
       errors.photo = "Photo is required";
     }
-
+  
     if (Object.keys(errors).length > 0) {
       setError(errors);
       return;
     }
-
-    try {
-      await handleSave();
-      setIsSubmitted(true);
-    } catch (error) {
-      setErrorMessage("Terjadi kesalahan saat menyimpan data. Silakan coba lagi.");
-    }
+  
+    setIsLoading(true);
+    setIsSubmitted(true);
+  
+    handleSave()
+      .then(() => {
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setErrorMessage("Terjadi kesalahan saat menyimpan data. Silakan coba lagi.");
+        setIsLoading(false);
+      });
   };
+  
+  
 
   const resetForm = () => {
     setPhoto(null);
@@ -171,6 +179,20 @@ function Home() {
     setError((prev) => ({ ...prev, meetingWith: "" }));
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <svg className="animate-spin h-10 w-10 text-blue-600 mx-auto" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"></path>
+          </svg>
+          <p className="mt-4 text-lg text-gray-700">Saving data, please wait...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <>
       <Header />
@@ -284,8 +306,36 @@ function Home() {
               {error.photo && <p className="text-red-500 text-sm mt-1">{error.photo}</p>}
             </div>
 
-            <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex justify-center items-center">
-              <Save className="w-4 h-4 mr-2" /> Save
+            <button
+              type="submit"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex justify-center items-center"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"
+                    ></path>
+                  </svg>
+                  Saving...
+                </span>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" /> Save
+                </>
+              )}
             </button>
           </form>
         </div>
